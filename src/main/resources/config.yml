@@ -1,0 +1,15 @@
+storage:
+  type: sqlite # sqlite or mysql
+  mysql:
+    host: localhost
+    port: 3306
+    database: mariscore
+    username: root
+    password: ''
+    ssl: false
+  pool:
+    maximumPoolSize: 10
+    minimumIdle: 2
+settings:
+  starting-money: 0
+  starting-shards: 0

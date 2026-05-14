@@ -1,0 +1,61 @@
+prefix: "&8[&bMarisCore&8] "
+
+common:
+  players-only: "&cPlayers only."
+  player-not-found: "&cPlayer data not found."
+  invalid-amount: "&cInvalid amount."
+  unknown-subcommand: "&cUnknown subcommand."
+  no-permission: "&cYou do not have permission to use this command."
+
+usage:
+  eco: "&c/eco <give|take|set|reset> <player> [money]"
+  shards: "&c/shards <give|take|set|reset> <player> [shards]"
+  pay: "&c/pay <player> <money>"
+
+
+balance:
+  chat: "&7You have &a$%money%"
+  actionbar: "&7You have &a$%money%"
+
+eco:
+  give: "&7You gave $%player% &a%money%"
+  take: "&7You take %player% &a$%money%"
+  set: "&aYou set the amount of money for %player% to $%money%"
+  reset: "&aYou have reset the amount of money for %player%"
+
+shards:
+  balance:
+    chat: "&7Your shards: &#A800FF%shards%"
+    actionbar: "&7Your shards: &#A800FF%shards%"
+  give: "&7You gave $%player% &#A800FF%shards%"
+  take: "&7You take %player% &#A800FF$%shards%"
+  set: "&aYou set the amount of shards for %player% to &#A800FF%shards%"
+  reset: "&aYou have reset the amount of money for %player%"
+
+pay:
+  self:
+    chat: "&cYou cannot transfer money to yourself."
+    actionbar: "&cYou cannot transfer money to yourself."
+  disabled:
+    chat: "&cThat player does not have payments enable in /settings"
+    actionbar: "&cThat player does not have payments enable in /settings"
+  not-enough-money: "&cYou do not have enough money."
+  sent:
+    chat: "&7You paid &#FFE300%player% &a$%money%"
+    actionbar: "&7You paid &#FFE300%player% &a$%money%"
+    sound:
+      enabled: true
+      name: ENTITY_EXPERIENCE_ORB_PICKUP
+      volume: 1.0
+      pitch: 1.0
+  received:
+    chat: "&#FFE300%player% &7paid you &a$%money%"
+    actionbar: "&#FFE300%player% &7paid you &a$%money%"
+    sound:
+      enabled: true
+      name: ENTITY_EXPERIENCE_ORB_PICKUP
+      volume: 1.0
+      pitch: 1.0
+
+  state-on: "&aON"
+  state-off: "&cOFF"

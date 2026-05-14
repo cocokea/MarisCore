@@ -1,0 +1,37 @@
+name: MarisCore
+version: '1.0'
+main: dev.mariscore.MarisCorePlugin
+api-version: '1.21'
+folia-supported: true
+authors: [Maris]
+depend: [Vault]
+softdepend: [PlaceholderAPI, MarisSettings]
+loadbefore: [MarisOrder, MarisAuction, MarisWorth]
+libraries:
+  - com.zaxxer:HikariCP:7.0.2
+  - org.xerial:sqlite-jdbc:3.53.0.0
+  - com.mysql:mysql-connector-j:9.7.0
+
+commands:
+  eco:
+    description: Manage player money
+    usage: /eco <give|take|set|reset> <player> [amount]
+    permission: mariscore.admin.eco
+  bal:
+    description: Check your balance
+    usage: /bal
+    aliases: [balance, money]
+  shards:
+    description: Check or manage shards
+    usage: /shards [give|take|set|reset] <player> [amount]
+  pay:
+    description: Pay another player
+    usage: /pay <player> <amount>
+
+permissions:
+  mariscore.admin.eco:
+    description: Allows using /eco
+    default: op
+  mariscore.admin.shards:
+    description: Allows managing shards
+    default: op

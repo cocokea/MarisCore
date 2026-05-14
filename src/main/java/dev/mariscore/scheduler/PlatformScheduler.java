@@ -1,0 +1,6 @@
+package dev.mariscore.scheduler;
+import org.bukkit.Bukkit;import org.bukkit.entity.Player;import org.bukkit.plugin.Plugin;import java.lang.reflect.Method;import java.util.concurrent.*;
+public final class PlatformScheduler { private final Plugin plugin; private final boolean folia; public PlatformScheduler(Plugin plugin){this.plugin=plugin; this.folia=has("io.papermc.paper.threadedregions.RegionizedServer");}
+ private boolean has(String c){try{Class.forName(c);return true;}catch(Throwable t){return false;}}
+ public void async(Runnable r){ if(folia) try{Object s=Bukkit.class.getMethod("getAsyncScheduler").invoke(null); s.getClass().getMethod("runNow",Plugin.class,java.util.function.Consumer.class).invoke(s,plugin,(java.util.function.Consumer<Object>)t->r.run()); return;}catch(Throwable ignored){} Bukkit.getScheduler().runTaskAsynchronously(plugin,r);} 
+ public void player(Player p,Runnable r){ if(folia) try{Object s=p.getClass().getMethod("getScheduler").invoke(p); s.getClass().getMethod("run",Plugin.class,java.util.function.Consumer.class,Runnable.class).invoke(s,plugin,(java.util.function.Consumer<Object>)t->r.run(),null); return;}catch(Throwable ignored){} Bukkit.getScheduler().runTask(plugin,r);} }
