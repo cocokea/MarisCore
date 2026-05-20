@@ -21,7 +21,10 @@ public final class MarisCorePlugin extends JavaPlugin {
     private SettingsHook settingsHook;
 
     @Override public void onEnable() {
+        
         saveDefaultConfig();
+        MarisPluginStartup.bootstrap(this, "cocokea/MarisCore");
+saveDefaultConfig();
         dev.mariscore.util.Msg.init(this);
         settings = new Settings(this);
         settingsHook = new SettingsHook(this);

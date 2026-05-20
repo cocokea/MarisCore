@@ -1,3 +1,5 @@
+update-checker: true
+
 storage:
   type: sqlite # sqlite or mysql
   mysql:

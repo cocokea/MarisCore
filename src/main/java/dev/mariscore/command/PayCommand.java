@@ -75,24 +75,25 @@ public final class PayCommand implements CommandExecutor {
                 return;
             }
 
-            storage.add(player.getUniqueId(), "money", amount.negate()).join();
-            storage.add(target.uuid(), "money", amount).join();
+            storage.add(player.getUniqueId(), "money", amount.negate())
+                .thenCompose(ignored -> storage.add(target.uuid(), "money", amount))
+                .thenRun(() -> {
+                    plugin.scheduler().player(player, () -> {
+                        Msg.send(player, "pay.sent.chat", senderPlaceholders);
+                        Msg.bar(player, "pay.sent.actionbar", senderPlaceholders);
+                        Msg.play(player, "pay.sent.sound");
+                    });
 
-            plugin.scheduler().player(player, () -> {
-                Msg.send(player, "pay.sent.chat", senderPlaceholders);
-                Msg.bar(player, "pay.sent.actionbar", senderPlaceholders);
-                Msg.play(player, "pay.sent.sound");
-            });
-
-            Player onlineTarget = Bukkit.getPlayer(target.uuid());
-            if (onlineTarget != null && plugin.isPayAlertsEnabled(target.uuid())) {
-                Map<String, String> targetPlaceholders = Map.of("player", player.getName(), "money", Money.fmt(amount));
-                plugin.scheduler().player(onlineTarget, () -> {
-                    Msg.send(onlineTarget, "pay.received.chat", targetPlaceholders);
-                    Msg.bar(onlineTarget, "pay.received.actionbar", targetPlaceholders);
-                    Msg.play(onlineTarget, "pay.received.sound");
+                    Player onlineTarget = Bukkit.getPlayer(target.uuid());
+                    if (onlineTarget != null && plugin.isPayAlertsEnabled(target.uuid())) {
+                        Map<String, String> targetPlaceholders = Map.of("player", player.getName(), "money", Money.fmt(amount));
+                        plugin.scheduler().player(onlineTarget, () -> {
+                            Msg.send(onlineTarget, "pay.received.chat", targetPlaceholders);
+                            Msg.bar(onlineTarget, "pay.received.actionbar", targetPlaceholders);
+                            Msg.play(onlineTarget, "pay.received.sound");
+                        });
+                    }
                 });
-            }
         });
         return true;
     }

@@ -14,11 +14,16 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 public final class Storage {
     private final MarisCorePlugin plugin;
     private final Settings s;
     private final ConcurrentMap<UUID, Account> cache = new ConcurrentHashMap<>();
+    private volatile ExecutorService dbExecutor;
     private volatile HikariDataSource ds;
     private volatile boolean closed;
 
@@ -30,10 +35,18 @@ public final class Storage {
             c.setJdbcUrl("jdbc:mysql://" + s.host + ":" + s.port + "/" + s.database + "?useSSL=" + s.ssl + "&serverTimezone=UTC");
             c.setUsername(s.username); c.setPassword(s.password); c.setDriverClassName("com.mysql.cj.jdbc.Driver");
         } else {
-            c.setJdbcUrl("jdbc:sqlite:" + plugin.getDataFolder() + "/mariscore.db"); c.setDriverClassName("org.sqlite.JDBC"); c.setMaximumPoolSize(1);
+            c.setJdbcUrl("jdbc:sqlite:" + plugin.getDataFolder() + "/mariscore.db");
+            c.setDriverClassName("org.sqlite.JDBC");
+            c.setMaximumPoolSize(1);
+            c.setMinimumIdle(1);
+            c.setConnectionTimeout(0L);
         }
         if (!s.type.equals("sqlite")) { c.setMaximumPoolSize(s.maxPool); c.setMinimumIdle(s.minIdle); }
         ds = new HikariDataSource(c); closed = false;
+        int executorSize = s.type.equals("sqlite") ? 1 : Math.max(1, s.maxPool);
+        dbExecutor = executorSize == 1
+            ? Executors.newSingleThreadExecutor(new DbThreadFactory("MarisCore-DB"))
+            : Executors.newFixedThreadPool(executorSize, new DbThreadFactory("MarisCore-DB"));
         runSync("CREATE TABLE IF NOT EXISTS maris_accounts (uuid VARCHAR(36) PRIMARY KEY,name VARCHAR(16),money DECIMAL(32,2) NOT NULL DEFAULT 0,shards DECIMAL(32,2) NOT NULL DEFAULT 0,updated_at BIGINT NOT NULL)");
     }
 
@@ -122,7 +135,60 @@ public final class Storage {
     }); }
 
     private Account map(ResultSet r) throws SQLException { return new Account(UUID.fromString(r.getString("uuid")), r.getString("name"), r.getBigDecimal("money"), r.getBigDecimal("shards")); }
-    private <T> CompletableFuture<T> task(Callable<T> c) { CompletableFuture<T> f = new CompletableFuture<>(); if (isClosed() && closed) { try { f.complete(c.call()); } catch (Throwable e) { f.completeExceptionally(e); } return f; } plugin.scheduler().async(() -> { try { f.complete(c.call()); } catch (Throwable e) { plugin.getLogger().severe(String.valueOf(e.getMessage())); f.completeExceptionally(e); } }); return f; }
-    public void close() { closed = true; HikariDataSource current = ds; if (current != null && !current.isClosed()) current.close(); }
+    private <T> CompletableFuture<T> task(Callable<T> c) {
+        CompletableFuture<T> f = new CompletableFuture<>();
+        if (isClosed() && closed) {
+            try { f.complete(c.call()); } catch (Throwable e) { f.completeExceptionally(e); }
+            return f;
+        }
+        Runnable job = () -> {
+            try {
+                f.complete(c.call());
+            } catch (Throwable e) {
+                plugin.getLogger().severe(String.valueOf(e.getMessage()));
+                f.completeExceptionally(e);
+            }
+        };
+        ExecutorService executor = dbExecutor;
+        if (executor == null || executor.isShutdown()) {
+            f.completeExceptionally(new IllegalStateException("Storage executor is unavailable"));
+            return f;
+        }
+        executor.execute(job);
+        return f;
+    }
+    public void close() {
+        closed = true;
+        ExecutorService executor = dbExecutor;
+        if (executor != null) {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(10L, TimeUnit.SECONDS)) {
+                    plugin.getLogger().warning("Timed out while waiting for pending database tasks to finish.");
+                }
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                plugin.getLogger().warning("Interrupted while waiting for pending database tasks to finish.");
+            }
+            dbExecutor = null;
+        }
+        HikariDataSource current = ds;
+        if (current != null && !current.isClosed()) current.close();
+    }
     public record Account(UUID uuid, String name, BigDecimal money, BigDecimal shards) {}
+
+    private static final class DbThreadFactory implements ThreadFactory {
+        private final String name;
+
+        private DbThreadFactory(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread thread = new Thread(r, name);
+            thread.setDaemon(true);
+            return thread;
+        }
+    }
 }

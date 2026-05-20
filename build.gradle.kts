@@ -18,3 +18,8 @@ dependencies {
 
 tasks.processResources { filteringCharset = "UTF-8"; filesMatching("plugin.yml") { expand("version" to project.version) } }
 
+tasks.jar {
+    archiveBaseName.set("MarisCore")
+    archiveVersion.set("")
+}
+
